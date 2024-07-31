@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS WAF Template to create default Managed Rules with waf logging enabled
+Parameters:
+  Region:
+    Type: String
+    AllowedValues:
+      - stage
+      - us1
+      - eu
+      - us2
+    Description: Select Region Type
+    Default: us1
+  
+  Environment:
+    Type: String
+    AllowedValues:
+      - stage
+      - prod
+    Description: Select which Type
+    Default: stage
+
+  ApplicationName:
+    Type: String
+    Description: Enter the name of the application
+    Default: 'testing'
+ 
+  AWSSQLiRuleSetExcludedRules:
+    Description: "By default all rules are set to count mode during an evaluation period. If you want rules to be fully enforced at deployment remove selected or all default inputs."
+    Type: CommaDelimitedList
+    Default:  SQLi_QUERYARGUMENTS, SQLi_BODY, SQLi_COOKIE
+  
+  AWSManagedRulesCommonRuleSet:
+    Description: "Contains rules that are generally applicable to web applications. This provides protection against exploitation of a wide range of vulnerabilities, including those described in OWASP publications."
+    Type: CommaDelimitedList
+    Default:  NoUserAgent_HEADER, SizeRestrictions_QUERYSTRING, SizeRestrictions_Cookie_HEADER, SizeRestrictions_BODY, SizeRestrictions_URIPATH, EC2MetaDataSSRF_BODY, EC2MetaDataSSRF_QUERYARGUMENTS, GenericLFI_BODY, GenericRFI_BODY, CrossSiteScripting_BODY
+
+  LogDestinationConfigBucket:
+    Type: String
+    Description: Enter the s3 bucket name where logs get stored.
+    Default: 'aws-waf-logs-gs-stage'
+Resources:
+  WebACL1:
+      Type: AWS::WAFv2::WebACL
+      Properties:
+        Name: !Join [ '-', [!Ref Region, !Ref Environment, !Ref ApplicationName, "waf"]]
+        Description: Web ACL using AWS Managed Rules.
+        Scope: REGIONAL
+        VisibilityConfig:
+          SampledRequestsEnabled: true
+          CloudWatchMetricsEnabled: true
+          MetricName: !Join [ '-', [!Ref Region, !Ref Environment, !Ref ApplicationName, "waf"]]
+
+        DefaultAction: 
+          Allow: {}
+    
+        Rules:
+
+        - Name: ProdIPBlockList
+          Priority: 0
+          Statement:
+            IPSetReferenceStatement:
+              Arn: "arn:aws:wafv2:us-east-1:895034595272:regional/ipset/BlockListForAPIGW/7539aa6b-0411-409b-af32-ea74c2a2a889"
+          Action:
+            Count: {}  
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: ProdIPBlockList
+        
+        - Name: AWSManagedRulesSQLiRuleSet
+          Priority: 2
+          OverrideAction:
+            None: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWSManagedRulesSQLiRuleSet
+          Statement:
+              ManagedRuleGroupStatement:
+                VendorName: AWS
+                Name: AWSManagedRulesSQLiRuleSet
+                Version: Version_1.1
+                RuleActionOverrides:
+                - Name: SQLi_BODY
+                  ActionToUse:
+                    Allow: {}
+                - Name: SQLi_COOKIE
+                  ActionToUse:
+                    Allow: {}
+                - Name: SQLi_QUERYARGUMENTS
+                  ActionToUse:
+                    Allow: {}
+            
+        - Name: AWSManagedRulesCommonRuleSet
+          Priority: 1
+          OverrideAction:
+            None: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWSManagedRulesCommonRuleSet
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+              Version: Version_1.4
+              RuleActionOverrides:
+              - Name: NoUserAgent_HEADER
+                ActionToUse:
+                  Allow: {}
+              - Name: SizeRestrictions_QUERYSTRING
+                ActionToUse:
+                  Allow: {}
+              - Name: SizeRestrictions_BODY
+                ActionToUse:
+                  Allow: {}
+              - Name: SizeRestrictions_URIPATH
+                ActionToUse:
+                  Allow: {}
+              - Name: EC2MetaDataSSRF_BODY
+                ActionToUse:
+                  Allow: {}
+              - Name: EC2MetaDataSSRF_QUERYARGUMENTS
+                ActionToUse:
+                  Allow: {}
+              - Name: GenericLFI_BODY
+                ActionToUse:
+                  Allow: {}
+              - Name: GenericRFI_BODY
+                ActionToUse:
+                  Allow: {}
+              - Name: CrossSiteScripting_BODY
+                ActionToUse:
+                  Allow: {}
+              - Name: SizeRestrictions_Cookie_HEADER
+                ActionToUse:
+                  Allow: {}
+  WebACL1Logging:
+      Type: AWS::WAFv2::LoggingConfiguration
+      Properties: 
+        ResourceArn:  
+          Fn::GetAtt:
+          - WebACL1
+          - Arn
+        LogDestinationConfigs:
+        - Fn::Sub: arn:aws:s3:${AWS::Region}:${AWS::AccountId}:${LogDestinationConfigBucket}
+        LoggingFilter:
+          DefaultBehavior: DROP
+          Filters:
+          - Behavior: KEEP
+            Conditions:
+            - ActionCondition:
+                Action: BLOCK
+            - ActionCondition:
+                Action: COUNT
+            Requirement: MEETS_ANY
+    
+   

@@ -41,7 +41,7 @@ Parameters:
   LogDestinationConfigBucket:
     Type: String
     Description: Enter the s3 bucket name where logs get stored.
-    Default: 'aws-waf-logs-gs-stage'
+    Default: 'aws-waf-logs-gs-stage-demo'
 
 Resources:
   WebACL1:

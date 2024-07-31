@@ -59,7 +59,7 @@ Resources:
           Priority: 0
           Statement:
             IPSetReferenceStatement:
-              Arn: "arn:aws:wafv2:us-east-1:895034595272:regional/ipset/BlockListForAPIGW/7539aa6b-0411-409b-af32-ea74c2a2a889"
+              Arn: "arn:aws:wafv2:us-east-1:891377326363:regional/ipset/gslaptop/ddf7d970-5ff9-4d98-ae8b-1de8b5da8869"
           Action:
             Count: {}  
           VisibilityConfig:

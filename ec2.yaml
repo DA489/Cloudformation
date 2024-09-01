@@ -3,16 +3,15 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: CloudFormation template to launch an EC2 instance
 
 Parameters:
-  Region:
+  SecurityGroupDescription:
+    Description: Security Group Description
     Type: String
-    Description: The AWS Region where the instance will be launched
     AllowedValues:
-      - us-east-1
-      - us-west-2
-      - eu-west-1
-      - ap-south-1
-    Default: us-east-1
-    ConstraintDescription: Must be a valid AWS region.
+      - Enable SSH access via port 22
+      - Enable HTTP access on port 80
+      - Enable HTTPS access on port 443
+      - Allow all inbound traffic
+    Default: "Enable SSH access via port 22"
 
 Resources:
   MyEC2Instance:
@@ -25,3 +24,13 @@ Resources:
       Tags:
         - Key: Name
           Value: MyEC2Instance
+  EC2Instancesecuritygrp:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Ref SecurityGroupDescription
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+ 
